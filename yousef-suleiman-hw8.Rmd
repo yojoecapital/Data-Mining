@@ -1,0 +1,122 @@
+---
+title: "CS 422 HW 8"
+output: 
+  html_notebook:
+    toc: yes
+    toc_float: yes
+author: Yousef Suleiman
+---
+
+## Part 2.1 K-means clustering
+```{R}
+library(cluster)
+library(factoextra)
+setwd("G:/My Drive/Sophomore Fall/CS 422 Data Mining/hw 8")
+```
+
+### Part 2.1-A-i
+I kept all the attributes as each tooth count seemed important in identifying each mammal.
+
+### Part 2.1-A-ii
+The data set does not need to be standardized as their scales do not differ and and they are all simple and discrete counts of teeth.
+
+### Part 2.1-A-iii
+```{R}
+df <- read.csv("file19.csv", sep = ',')
+head(df)
+```
+
+### Part 2.1-B-i
+```{R}
+fviz_nbclust(df[-1], kmeans, method="silhouette")
+```
+The silhouette width should be maximized so the number of clusters we should use is 8.
+
+### Part 2.1-B-ii
+```{R}
+k <- kmeans(df[-1], centers=8) 
+fviz_cluster(kmeans(df[-1], centers=8), data=df[-1])
+```
+
+### Part 2.1-B-iii
+```{R}
+for(ci in 1:length(k$size))
+  cat("Cluster", ci, "has", k$size[ci], "observations\n")
+```
+
+### Part 2.1-B-iv
+```{R}
+cat("The total SSE is", k$totss, "\n")
+```
+
+### Part 2.1-B-v
+```{R}
+for(ci in 1:length(k$size))
+  cat("Cluster", ci, "has an SSE of", k$withinss[ci], "\n")
+```
+
+### Part 2.1-B-vi
+```{R}
+for(i in 1:8)
+  print(df[which(k$cluster == i),])
+```
+The clusters provided by k-means does not make that too much sense. For example it separated multiple species of bats in the second and sixth cluster. Seals and other water creatures are in the first, third, and fifth cluster. Some clusters, however, aren't too bad like cluster seven has elk, deer, moose, and other similar 4-legged animals together - which makes sense to me. The conclusion that it doesn't make complete sense and can be better.
+
+## Part 2.2 dbscan clustering
+```{R}
+library(fpc)
+library(dbscan)
+
+df <- read.csv("s1.csv", sep = ',')
+head(df)
+```
+
+### Part 2.2-A
+No I do not think it is necessary as the scale of these values do not vary drastically but it does make analysis a lot easier. 
+```{R}
+df.scaled <- scale(df)
+```
+
+### Part 2.2-B-i
+```{R}
+plot(df.scaled, main = "Cartesian Space")
+```
+
+### Part 2.2-B-ii
+The data set has 15 clusters and they are all well separated.
+
+### Part 2.2-c-i
+```{R}
+fviz_nbclust(df.scaled, kmeans, method="wss", k.max = 30)
+```
+
+### Part 2.2-c-ii
+```{R}
+fviz_nbclust(df.scaled, kmeans, method="silhouette", k.max = 30)
+```
+
+### Part 2.2-c-iii
+According to our tools, the best number of clusters is 19.
+
+### Part 2.2-d-i
+```{R}
+k <- kmeans(df, centers=19) 
+fviz_cluster(kmeans(df.scaled, centers=19), data=df)
+```
+
+### Part 2.2-d-ii
+It seems like k-means has separated what my human eye considered to be 4 separate clusters into 1 more each.
+
+### Part 2.2-e-i
+I would say minPts = 5 as the dataset is not that noisy although it is large. It is also only 2-dimensional.
+
+### Part 2.2-e-ii
+```{R}
+kNNdistplot(df.scaled, k = 5)
+```
+
+```{R}
+db <- fpc::dbscan(df.scaled, eps = 0.07, MinPts = 5)
+fviz_cluster(db, df.scaled, stand = FALSE, ellipse = F, geom = "point")
+```
+At minPts = 5, eps = 0.07, there are 19 clusters

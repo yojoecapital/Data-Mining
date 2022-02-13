@@ -1,0 +1,112 @@
+---
+title: "CS 422 HW 6"
+output: 
+  html_notebook:
+    toc: yes
+    toc_float: yes
+author: Yousef Suleiman
+---
+
+```{R}
+setwd("G:/My Drive/Sophomore Fall/CS 422 Data Mining/hw 6")
+df <- read.csv("hotel_bookings.csv", sep=",", header=T)
+```
+```{R}
+#install.packages("randomForest")
+library(randomForest)
+library(rpart)
+library(caret)
+library(mipfp)
+```
+```{R}
+set.seed(1122)
+index <- sample(1:nrow(df), 0.90*dim(df)[1])
+train.df <- df[index,]
+test.df <- df[-index,]
+
+train.df$is_canceled <- as.factor(train.df$is_canceled)
+test.df$is_canceled <- as.factor(test.df$is_canceled)
+```
+
+### Part 2.1
+```{R}
+count <- 1
+numPred <- 12
+form <- is_canceled ~ lead_time + market_segment + distribution_channel + previous_cancellations + deposit_type + customer_type + adr + required_car_parking_spaces + total_of_special_requests + is_repeated_guest + previous_bookings_not_canceled + days_in_waiting_list
+
+for(a in c(200, 500, 750)) #change to 250, 500, 750
+{
+  for(b in c(floor(sqrt(numPred)), floor(sqrt(numPred))+1, floor(sqrt(numPred))+2))
+  {
+    fit <- randomForest(form, data = train.df, ntree = a, mtry = b)
+    saveTreeTry <- c(a, b)
+    saveOOB <- fit$err.rate[a, 1]
+    saveCM <- confusionMatrix(predict(fit, test.df), test.df$is_canceled)
+    saveModel <- fit
+    save(list = c("saveTreeTry", "saveOOB", "saveCM", "saveModel"), file = paste("save", count, ".Rdata"))
+    count <- count + 1
+  }
+}
+```
+
+### Part 2.1.A
+```{R}
+load(file = paste("save", 9, ".Rdata"))
+maxAcc <- saveCM$byClass[11]
+maxSen <- saveCM$byClass[1]
+maxSpc <- saveCM$byClass[2]
+counterAcc <- 9
+counterSen <- 9
+counterSpc <- 9
+for(c in 1:9)
+{
+  load(file = paste("save", c, ".Rdata"))
+  if(saveCM$byClass[11][[1]] > maxAcc[[1]])
+  {
+    maxAcc <- saveCM$byClass[11]
+    counterAcc <- c
+  }
+  if(saveCM$byClass[1][[1]] > maxSen[[1]])
+  {
+    maxAcc <- saveCM$byClass[1]
+    counterSen <- c
+  }
+  if(saveCM$byClass[2][[1]] > maxSpc[[1]])
+  {
+    maxAcc <- saveCM$byClass[2]
+    counterSpc <- c
+  }
+}
+load(file = paste("save", counterAcc, ".Rdata"))
+TP <- as.table(saveCM)[2,2]
+TN <- as.table(saveCM)[1,1]
+FP <- as.table(saveCM)[2,1]
+FN <- as.table(saveCM)[1,2]
+cat("Grid search resulted in the best model at ntree =", saveTreeTry[1], " and mtry =", saveTreeTry[2], "\n",
+    "Accuracy =", (TP + TN) / (TP + TN + FP + FN), "\n",
+    "Balanced Accuracy =", saveCM$byClass[11], "\n",
+    "Sensitivity = ", saveCM$byClass[1], "\n",
+    "Specificity =", saveCM$byClass[2], "\n")  
+```
+
+### Part 2.1.B
+```{R}
+load(file = paste("save", 9, ".Rdata"))
+minOOB <- saveOOB
+counterOOB <- 9
+for(c in 1:9)
+{
+  load(file = paste("save", c, ".Rdata"))
+  if(saveOOB < minOOB)
+  {
+    minOOB <- saveOOB
+    counterOOB <- c
+  }
+}
+load(file = paste("save", counterOOB, ".Rdata"))
+cat("Grid search resulted in the best model for OOB at ntree = ", saveTreeTry[1], " and mtry = ", saveTreeTry[2], "\n",
+    "OOB = ",  saveOOB, "\n")
+```
+
+### Part 2.1.C
+No, these trees are not the same as one has 750 trees and 5 randomly chosen attributes while the other has 200 tree and 5 randomly chosen attributes. The *best* model is defined by different metrics in parts A and B. In A, we use values from the confusion matrix which are given after the final prediction is made. In B, we are using an OOB error which is calculated by the number of incorrect predictions made by trees from an out of bag sample which is calculated before the final prediction is made. Thus, these trees are different.

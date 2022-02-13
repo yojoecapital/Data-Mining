@@ -1,0 +1,54 @@
+---
+title: "CS 422 HW 2"
+output: 
+  html_notebook:
+    toc: yes
+    toc_float: yes
+author: Yousef Suleiman
+---
+
+### Part 2-A
+```{r}
+setwd("G:/My Drive/Sophomore Fall/CS 422 Data Mining/hw 2")
+df <- read.csv("us-covid-deaths.csv", sep=",", header=T)
+df <- df[complete.cases(df),]
+head(df)
+```
+
+### Part 2-B
+
+```{r}
+library(psych)
+pairs.panels(df[,-1])
+```
+### Part 2-B-i
+The response variable has the highest positive correlation with total_tests and the correlation coefficient is 0.99.
+
+### Part 2-B-ii
+The response variable has the highest negative correlation with  stringency_index and the correlation coefficient is -0.66.
+
+### Part 2-B-iii
+According to my interpretation, the predictor total_tests has the highest positive correlation with total_deaths because in order for a death to be attributed to Covid-19, the person must have been tested. Thus, the more testing that is done, the more deaths there are that can be attributed to Covid-19. The predictor stringency_index has the highest negative correlation because the more strict government policies are, then the less likely it is for the disease to spread and the less deaths there will be the at will attributed to Covid-19. 
+
+### Part 2-C
+```{r}
+model <- lm(total_deaths ~ ., data = df[,-1])
+summary(model)
+```
+
+### Part 2-D
+Although it can be better, it is a good linear regression model. Assuming the null hypothesis is that all the predictor values are zero and the alternative hypothesis is that at least one of them is non-zero, our f-statistic > 1 tells us that we do not reject the alternative hypothesis. Thus, it is more likely that there is a relationship between at least one of the predictors and the response variable.  
+
+### Part 2-e
+The subset of all the predictors excluding hosp_patients are statistically significant.
+
+### Part 2-f
+The predictor hosp_patients has a higher p-value (between 0.1 and 1) which implies that there may not be a relationship between it and total_deaths.
+
+
+### Part 2-g
+```{r}
+newModel <- lm(total_deaths ~ ., data = df[,c(-1,-7)])
+summary(newModel)
+```
+After removing total_tests, the f-statistic dropped significantly which tells us the model is not as fit as the one in part (c). The RSE also increased greatly which tells us the difference between the observed values of total_deaths and the fitted values our model provides has increased greatly. The R^2 values have also decreased meaning the model does not explain the variability of the observed values as well as it did in part (c). The p-value of reproduction_rate tells us that this predictor is not as significant.

@@ -1,0 +1,102 @@
+---
+title: "CS 422 HW 1"
+output: 
+  html_notebook:
+    toc: yes
+    toc_float: yes
+author: Yousef Suleiman
+---
+
+### Part 2.1-A
+```{r}
+setwd("G:/My Drive/Sophomore Fall/CS 422 Data Mining/hw 1")
+colleges <- read.csv("College.csv", sep=",", header=T) 
+head(colleges[, c(1,5,8,10)], n = 5L)
+```
+
+### Part 2.1-B
+
+```{r}
+private <- sum(colleges$Private == "Yes")
+public <- sum(colleges$Private == "No")
+str <- paste0("There are ", private, ", private colleges and ", public, " public colleges in the data set")
+str
+```
+### Part 2.1-C
+```{r}
+library(dplyr)
+
+newColleges <- colleges %>% select(c('Private', 'Apps', 'Accept', 'Enroll', 'PhD', 'perc.alumni', 'S.F.Ratio', 'Grad.Rate'))
+
+head(newColleges)
+```
+
+### Part 2.1-D-i
+```{r}
+hist(filter(newColleges, Private == "Yes")$PhD, 
+     main = "Frequency of PhD Holders in Private School",
+     xlab = "Number of Holders")
+```
+### Part 2.1-D-ii
+```{r}
+hist(filter(newColleges, Private == "No")$PhD, 
+     main = "Frequency of PhD Holders in Public School",
+     xlab = "Number of Holders")
+```
+
+### Part 2.1-E-i
+```{r}
+#top 5 colleges with minimum graduation rates
+head(newColleges[order(newColleges$Grad.Rate),],
+     n = 5L)
+```
+
+### Part 2.1-E-ii
+```{r}
+#top 5 colleges with maximum graduation rates
+tail(newColleges[order(newColleges$Grad.Rate),],
+     n = 5L)
+```
+
+### Part 2.1-I-i
+```{r}
+library(psych)
+
+
+pairs.panels(newColleges %>% select('PhD', 'S.F.Ratio', 'Grad.Rate'))
+```
+
+### Part 2.1-I-ii
+The attributes of PhD and Grad.Rate have the highest positive correlation. This makes sense because the greater percentage of faculty that are PhD holders, the better they are at being educators and the more students are expected to receive proper education to graduate. Thus, it makes sense that these two values move in the same direction.
+
+
+### Part 2.1-I-iii
+The attributes of PhD and S.F.Ratio have the lowest negative correlation. This makes sense because the greater the student to faculty ratio is, the larger the class sizes are and the harder it is for students to get the proper education to graduate. It makes sense that these two values would move in opposite directions
+
+### Part 2.1-G
+```{r}
+boxplot(perc.alumni~Private, data = colleges,
+        main = "Alumni who Donate, Data",
+        xlab = "From Private School?",
+        ylab = "Percent of Alumni who Donate")
+```
+A greater amount of alumni who go to private schools donate than those who go to public schools.
+
+
+### Part 2.1-H-i
+```{r}
+grid(plot(ecdf(colleges$Expend),
+               main = "Student Expendature Data",
+               xlab = "Instructional expenditure per student",
+               ylab = "Proportion"))
+```
+
+### Part 2.1-H-ii
+```{r}
+paste0("The median expenditure is $", quantile(ecdf(colleges$Expend), .5), ".")
+```
+
+### Part 2.1-H-iii
+```{r}
+paste0("80% of the students pay less than $", quantile(ecdf(colleges$Expend), .8), ".")
+```

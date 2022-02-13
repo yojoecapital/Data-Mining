@@ -1,0 +1,188 @@
+---
+title: "CS 422 HW 7"
+output: 
+  html_notebook:
+    toc: yes
+    toc_float: yes
+author: Yousef Suleiman
+---
+
+### Part2.1
+```{R}  
+library(keras)
+library(dplyr)
+library(caret)
+
+rm(list=ls())
+
+# Set working directory as needed
+setwd("G:/My Drive/Sophomore Fall/CS 422 Data Mining/hw 7")
+
+df <- read.csv("activity-small.csv")
+
+# Seed the PRNG
+set.seed(1122)
+df <- df[sample(nrow(df)), ] 
+
+indx <- sample(1:nrow(df), 0.20*nrow(df))
+test.df  <- df[indx, ]
+train.df <- df[-indx, ]
+
+label.test <- test.df$label
+test.df$label <- NULL
+test.df <- as.data.frame(scale(test.df))
+test.df$label <- label.test
+rm(label.test)
+
+label.train <- train.df$label
+train.df$label <- NULL
+train.df <- as.data.frame(scale(train.df))
+train.df$label <- label.train
+rm(label.train)
+rm(indx)
+```
+```{R}
+#one hot encoding
+X_train <- select(train.df, -label)
+y_train <- train.df$label
+y_train.ohe <- to_categorical(y_train)
+
+X_test <- select(test.df, -label)
+y_test <- test.df$label
+y_test.ohe <- to_categorical(test.df$label)
+```
+```{R}
+create_model <- function(bs){
+  model <- keras_model_sequential() %>%
+    layer_dense(units = 8, activation="sigmoid", input_shape=c(3)) %>%
+    layer_dense(units = 4, activation="softmax")
+
+  model %>% 
+    compile(loss = "categorical_crossentropy", 
+           optimizer="adam", 
+           metrics=c("accuracy"))
+
+  model %>% fit(
+    data.matrix(X_train), 
+    y_train.ohe,
+    epochs=100,
+    batch_size=bs)
+  return(model)
+}
+```
+### Part 2.1.A
+```{R}
+model <- create_model(1)
+pred.prob <- predict(model, as.matrix(X_test))
+pred.class <- apply(pred.prob, 1, function(x) which.max(x)-1) 
+cfsmtx <- confusionMatrix(as.factor(pred.class), as.factor(y_test))
+```
+```{R}
+cat("Batch gradient descent\n",
+    "   Overall accuracy: ", round(cfsmtx$overall['Accuracy'], 2), "\n", sep = "")
+for(i in 1:4)
+  cat("   Class ", i-1, ": Sens. = ", round(cfsmtx$byClass[i,1], 2),
+      ", Spec. = ", round(cfsmtx$byClass[i,2], 2),
+      ", Bal.Acc. = ", round(cfsmtx$byClass[i,11], 2), "\n", sep = "")
+```
+### Part 2.1.B
+```{R}
+s <- c()
+for(bs in c(1, 32, 64, 128, 256))
+{
+  model <- NULL
+  begin <- Sys.time()
+  model <- create_model(bs)
+  end <- Sys.time()
+  
+  pred.prob <- predict(model, as.matrix(X_test))
+  pred.class <- apply(pred.prob, 1, function(x) which.max(x)-1) 
+  cfsmtx <- confusionMatrix(as.factor(pred.class), as.factor(y_test))
+  
+  s <- append(s, paste0("Batch size: ", bs, "\n",
+      "   Time taken to train neural network: ", round(end - begin, 2), " (seconds)\n",
+      "   Overall accuracy: ", round(cfsmtx$overall['Accuracy'], 2), "\n", sep = ""))
+  for(i in 1:4)
+    s[length(s)] <- paste0(s[length(s)], "   Class ", i-1, ": Sens. = ", round(cfsmtx$byClass[i,1], 2),
+        ", Spec. = ", round(cfsmtx$byClass[i,2], 2),
+        ", Bal.Acc. = ", round(cfsmtx$byClass[i,11], 2), "\n", sep = "")
+  s[length(s)] <- paste0(s[length(s)], "\n")
+}
+```
+```{R}
+for(i in 1:length(s))
+  cat(s[i])
+```
+### Part 2.1.C
+(i) Increasing batch size means that instead of calculating error and updating weights for each observation, we calculate error for each observation in a batch and then update weights. It is equivalent to doing fewer big steps instead of many small steps. Thus, as observed, the time to train tends to decrease. 
+(ii) The per-class statistics and overall accuracy do tend to decrease as batch size increases for each model. I believe it changes because as batch size increases, the average across all observations in a batch (used to calculate the gradient vector) could cause the weights to be adjusted in a way that is not the most optimal as opposed to calculating error per observation. The best case scenario is that this average across observations in a batch gets rid of noise while the worst is that it leads to a higher generalization error. 
+
+### Part 2.1.D
+```{R}
+get_model<- function(n1, f1, n2, f2){
+  model <- keras_model_sequential() %>%
+    layer_dense(units = n1, activation=f1, input_shape=c(3)) %>%
+    layer_dense(units = n2, activation=f2) %>%
+    layer_dense(units = 4, activation="softmax")
+
+  model %>% 
+    compile(loss = "categorical_crossentropy", 
+           optimizer="adam", 
+           metrics=c("accuracy"))
+
+  model %>% fit(
+    data.matrix(X_train), 
+    y_train.ohe,
+    epochs=100,
+    batch_size=1)
+  
+  pred.prob <- predict(model, as.matrix(X_test))
+  pred.class <- apply(pred.prob, 1, function(x) which.max(x)-1) 
+  cfsmtx <- confusionMatrix(as.factor(pred.class), as.factor(y_test))
+  
+  s <- paste0("Batch size: ", 1, "\n",
+      "   Overall accuracy: ", round(cfsmtx$overall['Accuracy'], 2), "\n", sep = "")
+  for(i in 1:4)
+    s <- paste0(s, "   Class ", i-1, ": Sens. = ", round(cfsmtx$byClass[i,1], 2),
+        ", Spec. = ", round(cfsmtx$byClass[i,2], 2),
+        ", Bal.Acc. = ", round(cfsmtx$byClass[i,11], 2), "\n", sep = "")
+  s <- paste0(s, "\n")
+  return(s)
+}
+```
+#### Model 1: Add second hidden layer that has same paramters as first
+```{R}
+s <- get_model(8, "sigmoid", 8, "sigmoid")
+```
+```{R}
+cat(s)
+```
+#### Model 2: Decrease the nodes
+```{R}
+s <- get_model(4, "sigmoid", 4, "sigmoid")
+```
+```{R}
+cat(s)
+```
+#### Model 3: Increase the nodes
+```{R}
+s <- get_model(10, "sigmoid", 10, "sigmoid")
+```
+```{R}
+cat(s)
+```
+#### Model 4: Increase the first hidden layer's nodes
+```{R}
+s <- get_model(16, "sigmoid", 10, "sigmoid")
+```
+```{R}
+cat(s)
+```
+#### Model 5: Adjust nodes slightly and try relu for second activation function
+```{R}
+s <- get_model(14, "sigmoid", 14, "relu")
+```
+```{R}
+cat(s)
+```
+(a) By adding a second hidden layer and adjusting its nodes to be significantly greater, the overall performance of the model increased. However, on my first construction, the overall accuracy had actually decreased by about 2%. It began to increase when I tweaked the number of nodes on each hidden layer.

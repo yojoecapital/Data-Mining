@@ -1,0 +1,201 @@
+---
+title: "CS 422 HW 5"
+output: 
+  html_notebook:
+    toc: yes
+    toc_float: yes
+author: Yousef Suleiman
+---
+
+```{r}
+setwd("G:/My Drive/Sophomore Fall/CS 422 Data Mining/hw 5")
+df <- read.csv("hotel_bookings.csv", sep=",", header=T)
+```
+
+## Part 2.1
+### Part 2.1-A
+```{r}
+cat("There are", sum(df$hotel == "Resort Hotel"), "hotels of type H1 and there are", sum(df$hotel == "City Hotel"), "hotels of type H2.")
+```
+
+### Part 2.1-B
+```{r}
+cat("Number of guests who canceled reservation:", sum(df$is_canceled), "\nNumber of guests who did not cancel the reservation:", sum(!df$is_canceled))
+```
+
+### Part 2.1-C
+```{r}
+c <- sort(table(df$customer_type), decreasing = T)[1]
+cat("Customer type with the most reservations is ", names(c),", with ",c ," reservations", sep = "")
+```
+
+### Part 2.1-D
+```{r}
+pmx <- max(df$required_car_parking_spaces)
+cat(sum(df$required_car_parking_spaces == pmx), " customers required the most number of parking spaces (",pmx , ").", sep = "")
+```
+
+### Part 2.1-E
+```{r}
+pmn <- min(df$required_car_parking_spaces)
+cat(sum(df$required_car_parking_spaces == pmn), " customers required the least number of parking spaces (",pmn , ").", sep = "")
+```
+
+### Part 2.1-F
+```{r}
+library(scales)
+per <- label_percent(accuracy = 0.01)(sum(df$reserved_room_type == df$assigned_room_type) / nrow(df))
+cat(per, "of the people who expressed a room preference during reservations got the room during check-in.")
+```
+
+### Part 2.1-G
+```{r}
+barplot(sort(table(df[df$hotel == "Resort Hotel" & df$country != "NULL",]$country), decreasing = T)[10:1], col = rainbow(10), main = "Top 10 countries of origin for Resort Hotel", xlab = "Country", ylab = "Number of Bookings")
+
+barplot(sort(table(df[df$hotel == "City Hotel" & df$country != "NULL",]$country), decreasing = T)[10:1], col = rainbow(10), main = "Top 10 countries of origin for City Hotel", xlab = "Country", ylab = "Number of Bookings")
+```
+
+### Part 2.1-H
+#### Part 2.1-H-i
+This country is Portugal. 
+
+#### Part 2.1-H-ii
+The dataset probably received most of its survey information from Portugal or the hotels themselves are located in Portugal.
+
+## Part 2.2
+### Part 2.2-A
+```{r}
+library(rpart)
+library(rpart.plot)
+set.seed(1122)
+index <- sample(1:nrow(df), 0.90*dim(df)[1])
+train.df <- df[index,]
+test.df <- df[-index,]
+model <- rpart(is_canceled ~ lead_time + market_segment + distribution_channel + previous_cancellations + deposit_type + customer_type + adr + required_car_parking_spaces + total_of_special_requests + is_repeated_guest + previous_bookings_not_canceled + days_in_waiting_list, data = train.df, method = 'class')
+```
+
+#### Part 2.2-A-i
+```{r}
+rpart.plot(model, extra=104, fallen.leaves=T, type=4, main="is_canceled Decision Tree")
+#printcp(model)
+```
+
+#### Part 2.2-A-ii
+The variables I found to be most important (in decreasing order) are deposit_type, total_of_special_requests, previous_cancellations, lead_time, market_segment, customer_type, distribution_channel, adr, required_car_parking_spaces, days_in_waiting_list, previous_bookings_not_canceled, and is_repeated_guest.
+
+#### Part 2.2-A-iii
+```{R}
+pred <- predict(model, test.df, type = "class")
+cfs_mtx <- table(pred, test.df$is_canceled)
+#Confusion Matrix:
+cfs_mtx
+TP <- cfs_mtx[2,2]
+TN <- cfs_mtx[1,1]
+FP <- cfs_mtx[2,1]
+FN <- cfs_mtx[1,2]
+acc <- (TP + TN) / (TP + TN + FP + FN)
+err <- (FP + FN) / (TP + TN + FP + FN)
+spc <- TN / (TN + FP)
+sen <- TP / (TP + FN)
+prc <- TP / (TP + FP)
+bal_acc = (spc + sen) / 2
+cat(  "Accuracy:", round(acc, 3), "\n",
+      "Error:", round(err, 3), "\n",
+      "Balanced Acc:", round(bal_acc, 3), "\n",
+      "Specificity:", round(spc, 3), "\n",
+      "Sensitivity:", round(sen, 3), "\n",
+      "Precision:", round(prc, 3))
+
+```
+
+#### Part 2.2-A-iv
+```{R}
+library(ROCR)
+pred_prob <- predict(model, test.df, type = "prob")
+prediction <- prediction(pred_prob[,2], test.df$is_canceled)
+performance <- performance(prediction, "tpr", "fpr")
+plot(performance, main = "ROC Curve", col = 2, lwd = 2)
+abline(a = 0,b = 1,lwd = 2,lty = 3,col = "black")
+```
+
+#### Part 2.2-A-v
+```{R}
+auc <- performance(prediction, measure = "auc")
+auc <- auc@y.values[[1]]
+cat("The area under the ROC curve is", auc, ".")
+```
+
+## Part 2.3
+```{r}
+set.seed(1122)
+index <- sample(1:nrow(df), 0.90*dim(df)[1])
+train.df <- df[index,]
+test.df <- df[-index,]
+```
+
+### Part 2.3-A
+```{R}
+new_model <- rpart(is_canceled ~ lead_time + market_segment + distribution_channel + previous_cancellations + deposit_type + customer_type + adr + required_car_parking_spaces + total_of_special_requests + is_repeated_guest + previous_bookings_not_canceled + days_in_waiting_list, data = train.df, method = 'class', cp = 0.0)
+```
+```{R}
+pred <- predict(new_model, test.df, type = "class")
+cfs_mtx <- table(pred, test.df$is_canceled)
+TP <- cfs_mtx[2,2]
+TN <- cfs_mtx[1,1]
+FP <- cfs_mtx[2,1]
+FN <- cfs_mtx[1,2]
+acc <- (TP + TN) / (TP + TN + FP + FN)
+err <- (FP + FN) / (TP + TN + FP + FN)
+spc <- TN / (TN + FP)
+sen <- TP / (TP + FN)
+prc <- TP / (TP + FP)
+bal_acc = (spc + sen) / 2
+cat(  "Before pruning:\n",
+      "\tAccuracy:", round(acc, 3), "\n",
+      "\tError:", round(err, 3), "\n",
+      "\tBalanced Acc:", round(bal_acc, 3), "\n",
+      "\tSpecificity:", round(spc, 3), "\n",
+      "\tSensitivity:", round(sen, 3), "\n",
+      "\tPrecision:", round(prc, 3))
+```
+
+### Part 2.3-B
+```{R}
+#printcp(new_model)
+cp_inx <- which.min(new_model$cptable[,"xerror"])
+cplxy <- new_model$cptable[cp_inx, "CP"]
+xerr <- new_model$cptable[cp_inx, "xerror"]
+
+pruned_model <- prune(new_model, cplxy)
+
+cat("Prune point occurs at a complexity of", format(round(cplxy, 5), scientific = F),"\nAt this complexity, xerror is", round(xerr, 5))
+```
+
+### Part 2.3-C
+```{R}
+pred <- predict(pruned_model, test.df, type = "class")
+cfs_mtx <- table(pred, test.df$is_canceled)
+TP <- cfs_mtx[2,2]
+TN <- cfs_mtx[1,1]
+FP <- cfs_mtx[2,1]
+FN <- cfs_mtx[1,2]
+acc <- (TP + TN) / (TP + TN + FP + FN)
+err <- (FP + FN) / (TP + TN + FP + FN)
+spc <- TN / (TN + FP)
+sen <- TP / (TP + FN)
+prc <- TP / (TP + FP)
+bal_acc = (spc + sen) / 2
+cat(  "After pruning:\n",
+      "\tAccuracy:", round(acc, 3), "\n",
+      "\tError:", round(err, 3), "\n",
+      "\tBalanced Acc:", round(bal_acc, 3), "\n",
+      "\tSpecificity:", round(spc, 3), "\n",
+      "\tSensitivity:", round(sen, 3), "\n",
+      "\tPrecision:", round(prc, 3))
+```
+
+### Part 2.3-D
+The pruned tree generalizes better.
+
+### Part 2.3-E
+\(3\) The model in problem 2.3(b) generalizes the best.

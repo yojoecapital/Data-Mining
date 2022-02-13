@@ -1,0 +1,16 @@
+---
+title: "CS 422 HW 4"
+output: 
+  html_notebook:
+    toc: yes
+    toc_float: yes
+author: Yousef Suleiman
+---
+
+### Problem 1.1
+```{r}
+library(rpart)
+library(rpart.plot)
+model <- rpart(Species ~ ., data = iris, method = 'class')
+rpart.plot(model, extra=104, fallen.leaves=T, type=4, main="Iris Dataset Decision Tree")
+```
