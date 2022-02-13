@@ -1,0 +1,90 @@
+---
+title: "CS 422 HW 9"
+output: 
+  html_notebook:
+    toc: yes
+    toc_float: yes
+author: Yousef Suleiman
+---
+
+## Part 2.1
+```{R}
+library(arules)
+library(arulesViz)
+setwd("G:/My Drive/Sophomore Fall/CS 422 Data Mining/hw 9")
+```
+
+```{R}
+trans1k <- read.transactions("tr-1k-canonical.csv", sep=",")
+trans5k <- read.transactions("tr-5k-canonical.csv", sep=",")
+trans20k <- read.transactions("tr-20k-canonical.csv", sep=",")
+trans75k <- read.transactions("tr-75k-canonical.csv", sep=",")
+```
+### Part 2.1-B 1k Transactions
+#### Frequent Items
+```{R}
+f_is <- apriori(trans1k, parameter=list(supp=0.04, minlen = 2, target="frequent itemsets"))
+```
+```{R}
+inspect(sort(f_is, decreasing = T, by="count"))
+```
+#### Association Rules
+```{R}
+rules <- apriori(trans1k, parameter = list(supp=0.045, conf=0.5))
+```
+```{R}
+inspect(sort(rules, decreasing = T, by="count"))
+```
+### Part 2.1-B 5k Transactions
+#### Frequent Items
+```{R}
+f_is <- apriori(trans5k, parameter=list(supp=0.041, minlen = 2, target="frequent itemsets"))
+```
+```{R}
+inspect(sort(f_is, decreasing = T, by="count"))
+```
+#### Association Rules
+```{R}
+rules <- apriori(trans5k, parameter = list(supp=0.03, conf=0.8))
+```
+```{R}
+inspect(sort(rules, decreasing = T, by="count"))
+```
+### Part 2.1-B 20k Transactions
+#### Frequent Items
+```{R}
+f_is <- apriori(trans20k, parameter=list(supp=0.039, minlen = 2, target="frequent itemsets"))
+```
+```{R}
+inspect(sort(f_is, decreasing = T, by="count"))
+```
+#### Association Rules
+```{R}
+rules <- apriori(trans20k, parameter = list(supp=0.025, conf=0.95))
+```
+```{R}
+inspect(sort(head(rules, 10), decreasing = T, by="count"))
+```
+### Part 2.1-B 75k Transactions
+#### Frequent Items
+```{R}
+f_is <- apriori(trans75k, parameter=list(supp=0.03, maxlen = 1, target="frequent itemsets"))
+```
+```{R}
+inspect(sort(f_is, decreasing = T, by="count"))
+```
+#### Association Rules
+```{R}
+rules <- apriori(trans75k, parameter = list(supp=0.028, conf=0.9))
+```
+```{R}
+inspect(sort(rules, decreasing = T, by="count"))
+```
+### Part 2.1-C
+With the transaction data of 1k entries, to derive 10 rules it took a minsup of 0.045 and a minconf of 0.5. For data of 5k entries, to derive 10 rules it took a minsup of 0.03 and minconf 0.8. For 20k, it took a minsup of 0.025 and a minconf of 0.95. For 75k entries, it took a minsup of 0.028 and  a minconf of 0.9. 
+
+It seems that as the number of transactions increased, the less of a minsup that was required to receive the same number of association rules for that of a database with less transaction. There also is a tendency for the minconf to be able to be larger for the same amount of assocation rules as the number of transactions increased.
+
+### Part 2.1-D
+(i) The most frequent item bought was Coffee Eclair while the most frequent pair of items bought together was Apricot Danish and Cherry Tart.
+(ii) The least frequent item bought was Chocolate Meringue
